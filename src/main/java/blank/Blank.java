@@ -7,21 +7,18 @@ import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-public class MultipleSelect {
+public class Blank {
 
-    private static String questionRegex = ".*[\\(|（][\\s|　]*([A-Z]+)[\\s|　]*[\\)|）].*";
-    private static String answerRegex = "[\\(|（].*([A-Z]+).*[\\)|）]";
+    private static String questionRegex = ".*";
+    private static String answerRegex = "(<span[^>]*>)([^>]*)(<\\/span>)";
 
     public static void main(String[] args) throws IOException {
-        ClassLoader classLoader = MultipleSelect.class.getClassLoader();
+        ClassLoader classLoader = Blank.class.getClassLoader();
 
         InputStream inputStream = null;
         try {
@@ -31,10 +28,6 @@ public class MultipleSelect {
             //System.out.println(data);
             List<BlankQuestion> convert = convert(data);
             for (BlankQuestion q : convert) {
-
-                String items = generateItems(q.getOptions());
-                String answer = JSONArray.toJSONString(q.getAnswer());
-                System.out.println(answer);
 
                 URL url = new URL("http://216.238.76.197:8000/api/admin/question/edit");
                 HttpURLConnection http = (HttpURLConnection)url.openConnection();
@@ -50,10 +43,10 @@ public class MultipleSelect {
                 http.setRequestProperty("Origin", "http://216.238.76.197:8000");
                 http.setRequestProperty("Referer", "http://216.238.76.197:8000/admin/index.html");
                 http.setRequestProperty("Accept-Language", "zh-CN,zh;q=0.9,zh-TW;q=0.8");
-                http.setRequestProperty("Cookie", "adminUserName=admin; Hm_lvt_cd8218cd51f800ed2b73e5751cb3f4f9=1648134945,1648216182; SL_G_WPT_TO=zh; SL_GWPT_Show_Hide_tmp=1; SL_wptGlobTipTmp=1; studentUserName=pingping; JSESSIONID=bvUpC4-7gv4LVXzviBQwc_PJx9cpLIJmzWABadLm; Hm_lpvt_cd8218cd51f800ed2b73e5751cb3f4f9=1648219780");
+                http.setRequestProperty("Cookie", "adminUserName=admin; studentUserName=pingping; Hm_lvt_cd8218cd51f800ed2b73e5751cb3f4f9=1648134945,1648216182,1648272515,1648343141; Hm_lpvt_cd8218cd51f800ed2b73e5751cb3f4f9=1648343141; SL_G_WPT_TO=zh; SL_GWPT_Show_Hide_tmp=1; SL_wptGlobTipTmp=1; JSESSIONID=vFLqOVW-pAJz3S6gqSG7rlcA3XInYonGDnEWAoMd");
 
-                String payload = "{\"id\":null,\"questionType\":2,\"gradeLevel\":1,\"subjectId\":1,\"title\":\"" + q.getQuestion() + "\",\"items\":" + items + ",\"analyze\":\"1\",\"correct\":\"\",\"correctArray\":" + answer + ",\"score\":1,\"difficult\":1}";
-
+                String payload = "{\"id\":null,\"questionType\":4,\"gradeLevel\":1,\"subjectId\":1,\"title\":\""+q.getQuestion()+"\",\"items\":"+q.getAnswer()+",\"analyze\":\"a\",\"correct\":\"\",\"score\":0,\"difficult\":1}";
+                System.out.println(payload);
                 byte[] out = payload.getBytes(StandardCharsets.UTF_8);
 
                 OutputStream stream = http.getOutputStream();
@@ -61,6 +54,8 @@ public class MultipleSelect {
 
                 System.out.println(http.getResponseCode() + " " + http.getResponseMessage());
                 http.disconnect();
+
+
 
 
             }
@@ -74,66 +69,43 @@ public class MultipleSelect {
 
     }
 
-    public static String generateItems(List<String> options) {
-        String template = "ABCDEFGHIGKLMN";
-        JSONArray arrays = new JSONArray();
-        for(int i = 0; i < options.size(); i++) {
-            JSONObject jsonObject = new JSONObject();
-            jsonObject.put("prefix", (char)template.getBytes()[i]);
-            jsonObject.put("content", options.get(i));
-            arrays.add(jsonObject);
-        }
-        return arrays.toJSONString();
-    }
 
     public static List<BlankQuestion> convert(String input) {
         String[] split = input.split("\n");
-        BlankQuestion question = null;
         List<BlankQuestion> questionList = new ArrayList<>();
         for (String s : split) {
             if( isQuestionLine(s)) {
-                if(Objects.nonNull(question)) {
-                    questionList.add(question);
-                }
-                question = new BlankQuestion();
-                String replace = s.replaceAll(answerRegex, "( )");
-                question.setQuestion(replace);
-                Matcher matcher = Pattern.compile(questionRegex).matcher(s);
-                if(matcher.find()) {
-                    for (byte aByte : matcher.group(1).getBytes()) {
-                        question.getAnswer().add((char)aByte);
-                    }
-                }
-            } else {
-                if (Objects.isNull(question)) {
-                    question = new BlankQuestion();
-                }
-                question.getOptions().addAll(dealOptions(s));
+                questionList.add(extractAnswer(s));
             }
         }
-        questionList.add(question);
+
         System.out.println(questionList);
         return questionList;
     }
 
     public static List<String> dealOptions(String optionLine) {
-        optionLine = optionLine.trim();
-        String regex = "([A-Z][\\.|、])";
-        return Arrays
-                .asList(optionLine.replaceAll(regex, "\n$1").split("\n"))
-                .stream()
-                .filter(o -> Objects.nonNull(o) && !"".equals(o))
-                .map(o -> o = o.trim())
-                .collect(Collectors.toList());
-
+        return null;
     }
 
-    public static String extractAnswer(String line) {
-        Matcher matcher = Pattern.compile(questionRegex).matcher(line);
-        if(matcher.find()) {
-            return matcher.group(1);
+    public static BlankQuestion extractAnswer(String line) {
+        Matcher matcher = Pattern.compile(answerRegex).matcher(line);
+        BlankQuestion blankQuestion = new BlankQuestion();
+        blankQuestion.setQuestion(line);
+        JSONArray answer = new JSONArray();
+        int i = 1;
+        while(matcher.find()) {
+            String uuid = UUID.randomUUID().toString();
+            blankQuestion.setQuestion(blankQuestion.getQuestion().replaceAll("(<span[^>]*>)" + matcher.group(2) + "(<\\/span>)", "<span class="+"\\\\"+"\"gapfilling-span " + uuid + ""+"\\\\"+"\">" + i + "$2"));
+            JSONObject item = new JSONObject();
+            item.put("itemUuid", uuid);
+            item.put("prefix", Integer.toString(i));
+            item.put("content", matcher.group(2));
+            item.put("score", 0);
+            answer.add(item);
+            i++;
         }
-        return null;
+        blankQuestion.setAnswer(JSONArray.toJSONString(answer));
+        return blankQuestion;
     }
 
     public static boolean isQuestionLine(String line) {

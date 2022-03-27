@@ -1,44 +1,33 @@
-package select.multiple;
+package blank;
 
-import java.util.ArrayList;
-import java.util.List;
 
-public class MultipleSelectQuestion {
+public class BlankQuestion {
 
     private String question;
-    private List<Character> answer = new ArrayList<>();
-    private List<String> options = new ArrayList<>();
+    private String answer;
 
     public String getQuestion() {
         return question;
+    }
+
+    @Override
+    public String toString() {
+        return "BlankQuestion{" +
+                "question='" + question + '\'' +
+                ", answer='" + answer + '\'' +
+                '}';
     }
 
     public void setQuestion(String question) {
         this.question = question;
     }
 
-    public List<Character> getAnswer() {
+    public String getAnswer() {
         return answer;
     }
 
-    public void setAnswer(List<Character> answer) {
+    public void setAnswer(String answer) {
         this.answer = answer;
     }
 
-    public List<String> getOptions() {
-        return options;
-    }
-
-    @Override
-    public String toString() {
-        return "select.single.Question{" +
-                "question='" + question + '\'' +
-                ", answer='" + answer + '\'' +
-                ", options=" + options +
-                '}';
-    }
-
-    public void setOptions(List<String> options) {
-        this.options = options;
-    }
 }
